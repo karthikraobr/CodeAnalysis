@@ -41,15 +41,20 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 	@Override
 	protected void flowThrough(Set<FlowAbstraction> taintsIn, Unit d, Set<FlowAbstraction> taintsOut) {
 		Stmt s = (Stmt) d;
-		//logger.info("Unit " + d);
+		logger.info("Unit " + d);
+		
+		//Variable to check if taintsIn needs to be added to taintsOut
 		Boolean retainTaint = false;
 
+		//Conditional Analysis for Assignment Statements
 		if(s instanceof  JAssignStmt)
 		{
+			//Check if assignment is to getSecret function
 			if(s.toString().contains("getSecret"))
 			{
 				if(!s.getDefBoxes().isEmpty()){
 					for(ValueBox defBox:s.getDefBoxes()){
+						//Adding tainted variable to taintsOut to obtain it as taintsIn during next iteration
 						taintsOut.add(getFlowAbstractionObj(s,defBox.getValue()));
 						System.out.println("Intial Taint "+ defBox.getValue());
 					}
@@ -65,7 +70,6 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 
 						}else{
 							retainTaint = true;
-							//taintsOut.addAll(taintsIn);
 						}
 					}
 
@@ -73,11 +77,11 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 				if(!taintsIn.isEmpty())
 				{
 					retainTaint = true;
-					//taintsOut.addAll(taintsIn);
 				}
 
 			}
 		}
+		//Conditional Analysis for Function Calls and Return Statements
 		else if ((s instanceof JInvokeStmt && !s.toString().contains("getSecret")) || s instanceof JReturnStmt){
 			for(FlowAbstraction in : taintsIn)
 			{
@@ -89,7 +93,6 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 
 					else{
 						retainTaint = true;
-						//taintsOut.addAll(taintsIn);
 					}
 				}
 
