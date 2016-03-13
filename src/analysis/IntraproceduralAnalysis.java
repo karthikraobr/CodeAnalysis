@@ -1,12 +1,13 @@
 package analysis;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
+import soot.jimple.internal.JAssignStmt;
+import soot.jimple.internal.JInvokeStmt;
+import soot.jimple.internal.JReturnStmt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import reporting.Reporter;
 import soot.Body;
 import soot.Local;
@@ -14,7 +15,6 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
-import soot.jimple.SpecialInvokeExpr;
 import soot.jimple.Stmt;
 import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.scalar.ForwardFlowAnalysis;
@@ -42,62 +42,62 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 	protected void flowThrough(Set<FlowAbstraction> taintsIn, Unit d, Set<FlowAbstraction> taintsOut) {
 		Stmt s = (Stmt) d;
 		//logger.info("Unit " + d);
+		Boolean retainTaint = false;
 
-		/*if(s.containsFieldRef())
+		if(s instanceof  JAssignStmt)
 		{
-			System.out.println("Field Ref");
-		}*/
-
-		List<ValueBox> defBoxes = s.getDefBoxes();
-		List<ValueBox> useBoxes = s.getUseBoxes();
-		
-		
-
-		if(!(defBoxes.isEmpty() && taintsIn.isEmpty())){
-			defBoxes.get(0).getValue();
-				for(FlowAbstraction in : taintsIn)
-				if(in.getLocal().equals(useBoxes.get(0).getValue())){
-					System.out.println(defBoxes.get(0).getValue() + "\t is tainted tooo!!!!");
-				}
-			}
-		
-		if(!defBoxes.isEmpty()){
-		for(ValueBox box: useBoxes)
-		{
-			Value value = box.getValue();
-			if(value instanceof SpecialInvokeExpr && value.toString().contains("getSecret"))
+			if(s.toString().contains("getSecret"))
 			{
-				//flag = true;
-				System.out.println("Tainted\t"+defBoxes.get(0).getValue());
-				taintsOut.add(new FlowAbstraction(s, (Local) defBoxes.get(0).getValue()));
-				
+				if(!s.getDefBoxes().isEmpty()){
+					for(ValueBox defBox:s.getDefBoxes()){
+						taintsOut.add(getFlowAbstractionObj(s,defBox.getValue()));
+						System.out.println("Intial Taint "+ defBox.getValue());
+					}
+				}
+			}else{
+				for(FlowAbstraction in : taintsIn){
+					for(ValueBox useBox:s.getUseBoxes()){
+						if(in.getLocal().equals(useBox.getValue())){
+							for(ValueBox defBox:s.getDefBoxes()){
+								taintsOut.add(getFlowAbstractionObj(s,defBox.getValue()));
+								System.out.println(defBox.getValue() + " is tainted because of "+useBox.getValue());
+							}
+
+						}else{
+							retainTaint = true;
+							//taintsOut.addAll(taintsIn);
+						}
+					}
+
+				}
+				if(!taintsIn.isEmpty())
+				{
+					retainTaint = true;
+					//taintsOut.addAll(taintsIn);
+				}
+
 			}
 		}
+		else if ((s instanceof JInvokeStmt && !s.toString().contains("getSecret")) || s instanceof JReturnStmt){
+			for(FlowAbstraction in : taintsIn)
+			{
+				for(ValueBox useBox:s.getUseBoxes()){
+					if(in.getLocal().equals(useBox.getValue())){
+						System.out.println(useBox.getValue() + " is Leaking Out!");
+						reporter.report(this.method, in.getSource(), d);
+					}
+
+					else{
+						retainTaint = true;
+						//taintsOut.addAll(taintsIn);
+					}
+				}
+
+			}
 		}
-		
-		
-//		if(this.checkForTaint(s))
-//		{
-//			if(!s.getDefBoxes().isEmpty())
-//			{
-//				Value taintVariable = this.getTaintVariable(s);
-//				System.out.println("taintVariable " + taintVariable);
-//				if(taintVariable instanceof soot.jimple.internal.JimpleLocal /*&& !s.containsFieldRef()*/)
-//				{
-//					/*System.out.println("Local variable taint " + taintVariable);
-//					FlowAbstraction taintflow = new FlowAbstraction(d, (Local) taintVariable);
-//					taintsOut.add(taintflow);*/
-//					reporter.report(this.method, d, d);
-//				}
-//				if(s.containsFieldRef())
-//				{
-//					System.out.println("taint Field Variable " + taintVariable);
-//					reporter.report(this.method, d, d);
-//				}
-//				else
-//					System.out.println("no taint");
-//			}
-//		}
+		if(retainTaint){
+			taintsOut.addAll(taintsIn);
+		}
 		/* IMPLEMENT YOUR ANALYSIS HERE */
 
 
@@ -129,31 +129,8 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 	public void doAnalyis() {
 		super.doAnalysis();
 	}
-
-	private Value getTaintVariable(Stmt s) 
+	private FlowAbstraction getFlowAbstractionObj(Stmt s,Value value)
 	{
-		Value taintVariable = null;
-		for(ValueBox taintedvar:s.getDefBoxes())
-		{
-			taintVariable = taintedvar.getValue();
-			//System.out.println("taint " + taintVariable);
-			//System.out.println("s " + s);
-		}
-		return taintVariable;
+		return new FlowAbstraction(s, (Local)value);
 	}
-
-	private Boolean checkForTaint(Stmt s)
-	{
-		Boolean flag = false;
-		for(ValueBox box: s.getUseBoxes())
-		{
-			Value currValue = box.getValue();
-			if(currValue instanceof SpecialInvokeExpr && ((SpecialInvokeExpr) currValue).getMethod().getName().contains("Secret"))
-			{
-				flag = true;
-			}
-		}
-		return flag;
-	}
-
 }
