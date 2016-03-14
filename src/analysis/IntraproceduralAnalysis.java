@@ -44,7 +44,7 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 		logger.info("Unit " + d);
 		
 		//Variable to check if taintsIn needs to be added to taintsOut
-		Boolean retainTaint = false;
+		Boolean keepTaint = false;
 
 		//Conditional Analysis for Assignment Statements
 		if(s instanceof  JAssignStmt)
@@ -69,14 +69,14 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 							}
 
 						}else{
-							retainTaint = true;
+							keepTaint = true;
 						}
 					}
 
 				}
 				if(!taintsIn.isEmpty())
 				{
-					retainTaint = true;
+					keepTaint = true;
 				}
 
 			}
@@ -92,13 +92,13 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 					}
 
 					else{
-						retainTaint = true;
+						keepTaint = true;
 					}
 				}
 
 			}
 		}
-		if(retainTaint){
+		if(keepTaint){
 			taintsOut.addAll(taintsIn);
 		}
 		/* IMPLEMENT YOUR ANALYSIS HERE */
