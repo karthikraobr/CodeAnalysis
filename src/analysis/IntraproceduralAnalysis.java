@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.jimple.internal.JAssignStmt;
+import soot.jimple.internal.JInstanceFieldRef;
 import soot.jimple.internal.JInvokeStmt;
 import soot.jimple.internal.JReturnStmt;
 import org.slf4j.Logger;
@@ -56,16 +57,22 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 					for(ValueBox defBox:s.getDefBoxes()){
 						//Adding tainted variable to taintsOut to obtain it as taintsIn during next iteration
 						taintsOut.add(getFlowAbstractionObj(s,defBox.getValue()));
-						System.out.println("Intial Taint "+ defBox.getValue());
+						//System.out.println("Intial Taint "+ defBox.getValue());
 					}
 				}
 			}else{
+				
 				for(FlowAbstraction in : taintsIn){
 					for(ValueBox useBox:s.getUseBoxes()){
 						if(in.getLocal().equals(useBox.getValue())){
 							for(ValueBox defBox:s.getDefBoxes()){
+								if(s.containsFieldRef())
+								{
+									reporter.report(this.method, in.getSource(), d);
+								}else{
 								taintsOut.add(getFlowAbstractionObj(s,defBox.getValue()));
-								System.out.println(defBox.getValue() + " is tainted because of "+useBox.getValue());
+								//System.out.println(defBox.getValue() + " is tainted because of "+useBox.getValue());
+								}
 							}
 
 						}else{
@@ -87,7 +94,7 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 			{
 				for(ValueBox useBox:s.getUseBoxes()){
 					if(in.getLocal().equals(useBox.getValue())){
-						System.out.println(useBox.getValue() + " is Leaking Out!");
+						//System.out.println(useBox.getValue() + " is Leaking Out!");
 						reporter.report(this.method, in.getSource(), d);
 					}
 
@@ -101,10 +108,6 @@ public class IntraproceduralAnalysis extends ForwardFlowAnalysis<Unit, Set<FlowA
 		if(keepTaint){
 			taintsOut.addAll(taintsIn);
 		}
-		/* IMPLEMENT YOUR ANALYSIS HERE */
-
-
-		// reporter.report(this.method, fa.getSource(), d);
 	}
 
 	@Override

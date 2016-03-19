@@ -3,7 +3,7 @@ package analyzeMe;
 public class TargetClass1 {
 
 	private final String whatsoever = "Test";
-private String field = "";
+
 	private void leak(String data) {
 		System.out.println("Leak: " + data);
 	}
@@ -29,7 +29,7 @@ private String field = "";
 	// Test 4
 	public void sourceToSink4() {
 		String x = getSecret();
-		//field=getSecret();
+
 	}
 
 	// Test 5
